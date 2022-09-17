@@ -79,7 +79,36 @@
 
 
 
-        return out;
+            return out;
+        }
+        public double[] test(double[]xIn){
+            // Copia o vetor x e acrescenta o bias
+            double[] x = fill(xIn);
+            x[x.length-1] = 1;
+
+            // inicializa o vetor h
+            double[] h = new double[qtdH+1];
+
+            // 1º camada
+            for (int j = 0; j < qtdH; j++) {
+                for (int i = 0; i < x.length; i++) {
+                    h[j] += x[i] * wh[i][j];
+                }
+                h[j] = sigmoid(h[j]);
+            }
+            h[qtdH]= 1;
+
+            // inicializa o vetor out
+            double[] out = new double[qtdOut];
+
+            // 2º camada
+            for (int j = 0; j < qtdOut; j++) {
+                for (int i = 0; i < h.length; i++) {
+                    out[j] += h[i] * wo[i][j];
+                }
+                out[j] = sigmoid(out[j]);
+            }
+            return out;
         }
         
         private double[] fill(double[] x){

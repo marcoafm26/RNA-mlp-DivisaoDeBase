@@ -2,8 +2,7 @@ package app;
 
 import domain.MLP;
 
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.*;
 import java.util.*;
 
 import static java.util.Collections.shuffle;
@@ -17,15 +16,8 @@ public class MlpRunner {
 
 
     public static List<Amostra> list_8 = new LinkedList<>();
-    public static double[][][] list_8_learn;
-    public static double[][][] list_8_test;
-
     public static List<Amostra> list_9 = new LinkedList<>();
-    public static double[][][] list_9_learn;
-    public static double[][][] list_9_test;
     public static List<Amostra> list_10 = new LinkedList<>();
-    public static double[][][] list_10_learn;
-    public static double[][][] list_10_test;
 
 
 
@@ -69,36 +61,44 @@ public class MlpRunner {
         
         final int QTD_IN = 7;
         final int QTD_OUT= 3;
-        final int QTD_INTER= 10;
-        final double U = 0.3;
-        final int EPOCA = 20;
+        final int QTD_INTER= 5;
+        final double U = 0.01;
+        final int EPOCA = 20000;
 
         MLP p = new MLP(QTD_IN,QTD_OUT,QTD_INTER,U);
         
-        double erroEp = 0;
-        double erroAm = 0;
+        double erroEpLearn = 0;
+        double erroAmLearn = 0;
+
+        double erroEpTest = 0;
+        double erroAmTest = 0;
+
         dataReader();
+        double base[][][][] = joinBase();
 
         for (int e = 0; e < EPOCA; e++) {
-            erroEp = 0;
-            double base[][][][] = joinBase();
 
-            // utiliza a base para apren
-            for (int a = 0; a < base.length; a++) {
-                double[] x = base[a][0];
-                double[] y = base[a][1];
+
+            erroEpLearn = 0;
+
+            // utiliza a base para aprendizado
+            for (int a = 0; a < base[0].length; a++) {
+                double[] x = base[0][a][0];
+                double[] y = base[0][a][1];
                 double[] out = p.learn(x,y);
-                erroAm = somaErroAmostra(y,out);
-                erroEp += erroAm;
+                erroAmLearn = somaErroAmostra(y,out);
+                erroEpLearn += erroAmLearn;
             }
-            for (int a = 0; a < base.length; a++) {
-                double[] x = base[a][0];
-                double[] y = base[a][1];
-                double[] out = p.learn(x,y);
-                erroAm = somaErroAmostra(y,out);
-                erroEp += erroAm;
+            erroEpTest = 0;
+            //  testa a base de teste
+            for (int a = 0; a < base[1].length; a++) {
+                double[] x = base[1][a][0];
+                double[] y = base[1][a][1];
+                double[] out = p.test(x);
+                erroAmTest = somaErroAmostra(y,out);
+                erroEpTest += erroAmTest;
             }
-               imprimir(erroEp,e);
+               imprimir(erroEpLearn,e);
         }
     }
 
@@ -110,19 +110,12 @@ public class MlpRunner {
         return soma;
     }
 
-
-    public static List<Amostra> preencheListaTeste(double[][][] base, List<Amostra> listaTeste, int cont){
-        Amostra amostra = new Amostra();
-        amostra.in = base[cont][0];
-        amostra.out = base[cont][1];
-        listaTeste.add(amostra);
-
-        return listaTeste;
-    }
-
     public static double[][][][] joinBase(){
         double baseDivididaTotal[][][][]= new double[2][][][];
         double aux[][][][];
+
+        // base[0][][][] = base de aprendizado
+        // base[1][][][] = base de teste
 
         //junta as bases divididas da lista 8
         aux = divideBase(list_8);
@@ -139,10 +132,13 @@ public class MlpRunner {
         baseDivididaTotal[0] = concatenar(baseDivididaTotal[0],aux[0]);
         baseDivididaTotal[1] = concatenar(baseDivididaTotal[1],aux[1]);
 
-
+   //     baseDivididaTotal[0] = embaralhar(baseDivididaTotal[0]);
+   //     baseDivididaTotal[1] = embaralhar(baseDivididaTotal[1]);
         return baseDivididaTotal;
     }
-    public static double[][][][] divideBase(List<Amostra> baseTeste){
+    public static double[][][][] divideBase(List<Amostra> base){
+        List<Amostra> baseTeste = new LinkedList<>();
+        baseTeste.addAll(base);
         double[][][][] basesDivididas;
         basesDivididas = new double[2][][][];
 
@@ -160,7 +156,7 @@ public class MlpRunner {
             basesDivididas[0][i][0] = amostra.in;
             basesDivididas[0][i][1] = amostra.out;
         }
-        basesDivididas[0] = embaralhar(basesDivididas[0]);
+     //   basesDivididas[0] = embaralhar(basesDivididas[0]);
 
         // preenchendo a base referente ao teste
         basesDivididas[1] = new double [test][2][] ;
@@ -169,11 +165,11 @@ public class MlpRunner {
             basesDivididas[1][i][0] = amostra.in;
             basesDivididas[1][i][1] = amostra.out;
         }
-        basesDivididas[1] = embaralhar(basesDivididas[1]);
+     //  basesDivididas[1] = embaralhar(basesDivididas[1]);
 
         return basesDivididas;
     }
-    public static double[][][] embaralhar(double [][][] v) {
+    public static double[][][] embaralhar(double[][][] v) {
         Random random = new Random();
         for (int i=0; i < (v.length - 1); i++) {
             int j = random.nextInt(v.length);
@@ -214,21 +210,35 @@ public class MlpRunner {
                     base[cont][0][j] = data[j];
                 }
                 out = data[7];
+                double[] x = base[cont][0];
+                double[] y;
                 if(out == 8){
                     base[cont][1] = new double[]{0, 0, 0};
-                    list_8 = preencheListaTeste(base,list_8,cont);
+                    y = base[cont][1];
+                    list_8.add(preencheListaTeste(list_8,x,y));
                 } else if (out == 9) {
                     base[cont][1] = new double[]{0, 0, 1};
-                    list_9 = preencheListaTeste(base, list_9,cont);
+                    y = base[cont][1];
+                    list_9.add(preencheListaTeste(list_9,x,y)) ;
                 } else if (out == 10) {
                     base[cont][1] = new double[]{0, 1, 0};
-                    list_10 = preencheListaTeste(base,list_10,cont);
+                    y = base[cont][1];
+                    list_10.add(preencheListaTeste(list_10,x,y));
                 }
                 cont++;
             }
 
         }
         return base;
+    }
+
+    public static Amostra preencheListaTeste(List<Amostra> listaTeste,double[] x, double[] y){
+
+        Amostra amostra = new Amostra();
+        amostra.in = x;
+        amostra.out = y;
+
+        return amostra;
     }
     public static double[] inFill(String linha){
         double[] entradas;
@@ -238,5 +248,13 @@ public class MlpRunner {
         entradas = Arrays.stream(linha.substring(1, linha.length()).split(",")).map(String::trim).mapToDouble(Double::parseDouble).toArray();
         return entradas;
     }
-
+//    public void dataWriter(String fileName) throws IOException {
+//        FileWriter fw = new FileWriter("arquivo.txt");
+//        PrintWriter printWriter = new PrintWriter(fw);
+//        arqInvertido.entrySet().forEach(key->{
+//            key.getValue().stream().sorted();
+//            printWriter.println(key.getKey() +" "+key.getValue().toString());
+//        });
+//        printWriter.close();
+//    }
 }
