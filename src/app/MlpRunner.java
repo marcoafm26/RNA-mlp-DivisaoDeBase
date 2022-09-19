@@ -30,12 +30,12 @@ public class MlpRunner {
 //    };
 
     // base Xor
-    private static final double[][][] base = {
-            { {0,0}, {0} },
-            { {0,1}, {1} },
-            { {1,0}, {1} },
-            { {1,1}, {0} }
-    };
+//    private static final double[][][] base = {
+//            { {0,0}, {0} },
+//            { {0,1}, {1} },
+//            { {1,0}, {1} },
+//            { {1,1}, {0} }
+//    };
 
     // base Or
 //    private static final double[][][] base = {
@@ -57,7 +57,7 @@ public class MlpRunner {
 //            { { 1, 1, 1 }, { 1, 0 } }
 //    };
 
-    public static void main(String[] args) throws FileNotFoundException {
+    public static void main(String[] args) throws IOException {
         
         final int QTD_IN = 7;
         final int QTD_OUT= 3;
@@ -76,8 +76,10 @@ public class MlpRunner {
         dataReader();
         double base[][][][] = joinBase();
 
-        for (int e = 0; e < EPOCA; e++) {
+        // lista para guardar os dados do execucao
+        double[][] errosLearnAndTest = new double[EPOCA][3];
 
+        for (int e = 0; e < EPOCA; e++) {
 
             erroEpLearn = 0;
 
@@ -90,6 +92,7 @@ public class MlpRunner {
                 erroEpLearn += erroAmLearn;
             }
             erroEpTest = 0;
+
             //  testa a base de teste
             for (int a = 0; a < base[1].length; a++) {
                 double[] x = base[1][a][0];
@@ -98,8 +101,12 @@ public class MlpRunner {
                 erroAmTest = somaErroAmostra(y,out);
                 erroEpTest += erroAmTest;
             }
-               imprimir(erroEpLearn,e);
+            errosLearnAndTest[e][0] = e;
+            errosLearnAndTest[e][1] = erroEpLearn;
+            errosLearnAndTest[e][2] = erroEpTest;
+            imprimir(erroEpLearn,e);
         }
+            dataWriter(errosLearnAndTest);
     }
 
     public static double somaErroAmostra(double[] y, double[] out){
@@ -132,8 +139,8 @@ public class MlpRunner {
         baseDivididaTotal[0] = concatenar(baseDivididaTotal[0],aux[0]);
         baseDivididaTotal[1] = concatenar(baseDivididaTotal[1],aux[1]);
 
-   //     baseDivididaTotal[0] = embaralhar(baseDivididaTotal[0]);
-   //     baseDivididaTotal[1] = embaralhar(baseDivididaTotal[1]);
+        baseDivididaTotal[0] = embaralhar(baseDivididaTotal[0]);
+        baseDivididaTotal[1] = embaralhar(baseDivididaTotal[1]);
         return baseDivididaTotal;
     }
     public static double[][][][] divideBase(List<Amostra> base){
@@ -156,7 +163,7 @@ public class MlpRunner {
             basesDivididas[0][i][0] = amostra.in;
             basesDivididas[0][i][1] = amostra.out;
         }
-     //   basesDivididas[0] = embaralhar(basesDivididas[0]);
+        basesDivididas[0] = embaralhar(basesDivididas[0]);
 
         // preenchendo a base referente ao teste
         basesDivididas[1] = new double [test][2][] ;
@@ -165,7 +172,7 @@ public class MlpRunner {
             basesDivididas[1][i][0] = amostra.in;
             basesDivididas[1][i][1] = amostra.out;
         }
-     //  basesDivididas[1] = embaralhar(basesDivididas[1]);
+       basesDivididas[1] = embaralhar(basesDivididas[1]);
 
         return basesDivididas;
     }
@@ -211,7 +218,7 @@ public class MlpRunner {
                 }
                 out = data[7];
                 double[] x = base[cont][0];
-                double[] y;
+                double[] y = base[cont][1];
                 if(out == 8){
                     base[cont][1] = new double[]{0, 0, 0};
                     y = base[cont][1];
@@ -248,13 +255,23 @@ public class MlpRunner {
         entradas = Arrays.stream(linha.substring(1, linha.length()).split(",")).map(String::trim).mapToDouble(Double::parseDouble).toArray();
         return entradas;
     }
-//    public void dataWriter(String fileName) throws IOException {
-//        FileWriter fw = new FileWriter("arquivo.txt");
-//        PrintWriter printWriter = new PrintWriter(fw);
-//        arqInvertido.entrySet().forEach(key->{
-//            key.getValue().stream().sorted();
-//            printWriter.println(key.getKey() +" "+key.getValue().toString());
-//        });
-//        printWriter.close();
-//    }
-}
+    public static void dataWriter(double[][] errosLearnAndTest) throws IOException {
+        FileWriter fwEpoca = new FileWriter("errosEpoca.txt");
+        PrintWriter printWriterEpoca = new PrintWriter(fwEpoca);
+
+        FileWriter fwLearn = new FileWriter("errosLearn.txt");
+        PrintWriter printWriterLearn = new PrintWriter(fwLearn);
+
+        FileWriter fwTest = new FileWriter("errosTest.txt");
+        PrintWriter printWriterTest = new PrintWriter(fwTest);
+        for (double[] erro: errosLearnAndTest) {
+            printWriterEpoca.println(erro[0]);
+            printWriterLearn.println(String.valueOf(erro[1]).replace('.',','));
+            printWriterTest.println(String.valueOf(erro[2]).replace('.',','));
+        }
+        printWriterEpoca.close();
+        printWriterLearn.close();
+        printWriterTest.close();
+        }
+    }
+
